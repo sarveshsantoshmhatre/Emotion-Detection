@@ -4,6 +4,9 @@ Usage:
     python test.py
     python test.py --camera 1
     python test.py --model /path/to/model.h5
+
+Legacy HDF5 models saved with Keras 2 may require the optional tf-keras
+compatibility package when running with TensorFlow/Keras 3.
 """
 
 import argparse
@@ -14,15 +17,20 @@ import cv2
 import numpy as np
 
 try:
-    from tensorflow.keras.models import load_model
+    from tensorflow.keras.models import load_model as modern_load_model
 except ImportError:
     try:
-        from keras.models import load_model
+        from keras.models import load_model as modern_load_model
     except ImportError as exc:
         raise SystemExit(
             "TensorFlow/Keras is not installed. Install the project's ML dependencies "
             "before running this script."
         ) from exc
+
+try:
+    from tf_keras.models import load_model as legacy_load_model
+except ImportError:
+    legacy_load_model = None
 
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -47,6 +55,36 @@ def parse_args():
     return parser.parse_args()
 
 
+def load_emotion_model(model_path):
+    """Load a model, retrying with Keras 2 compatibility for legacy H5 files."""
+    try:
+        return modern_load_model(str(model_path), compile=False)
+    except Exception as modern_error:
+        if legacy_load_model is None:
+            raise SystemExit(
+                f"Could not load model '{model_path}' with the installed TensorFlow/Keras: "
+                f"{modern_error}\n\nThis may be a legacy Keras H5 model. With TensorFlow "
+                "2.21, install the matching Keras 2 compatibility loader and retry:\n"
+                "  python -m pip install tf-keras==2.21.0"
+            ) from modern_error
+
+        try:
+            print(
+                "Standard Keras loading failed; retrying with the legacy tf-keras loader.",
+                file=sys.stderr,
+            )
+            model = legacy_load_model(str(model_path), compile=False)
+            print("Model loaded with tf-keras compatibility mode.", file=sys.stderr)
+            return model
+        except Exception as legacy_error:
+            raise SystemExit(
+                f"Could not load model '{model_path}'.\n"
+                f"TensorFlow/Keras loader error: {modern_error}\n"
+                f"Legacy tf-keras loader error: {legacy_error}\n"
+                "Confirm that the H5 file is intact and that its architecture is supported."
+            ) from legacy_error
+
+
 def main():
     args = parse_args()
 
@@ -59,14 +97,7 @@ def main():
     if face_detector.empty():
         raise SystemExit(f"Could not load face-detection cascade: {args.cascade}")
 
-    try:
-        model = load_model(str(args.model), compile=False)
-    except Exception as exc:
-        raise SystemExit(
-            f"Could not load model '{args.model}': {exc}\n"
-            "Check that the model is a valid Keras model and that your TensorFlow/Keras "
-            "version is compatible with the file."
-        ) from exc
+    model = load_emotion_model(args.model)
 
     # Use the model's declared input dimensions rather than assuming 48x48 grayscale.
     input_shape = model.input_shape
@@ -95,7 +126,6 @@ def main():
             "dataset's class_indices order before running predictions."
         )
 
-    # CAP_DSHOW is Windows-specific; use the default backend for portability (including Ubuntu).
     camera = cv2.VideoCapture(args.camera)
     if not camera.isOpened():
         camera.release()
@@ -121,7 +151,6 @@ def main():
             )
 
             for (x, y, width, height) in faces:
-                # Clip the region to frame bounds before preprocessing.
                 x0, y0 = max(0, x), max(0, y)
                 x1, y1 = min(frame.shape[1], x + width), min(frame.shape[0], y + height)
                 if x1 <= x0 or y1 <= y0:
@@ -130,12 +159,12 @@ def main():
                 face_bgr = frame[y0:y1, x0:x1]
                 if channels == 1:
                     face = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2GRAY)
-                    interpolation = cv2.INTER_AREA
                 else:
                     face = cv2.cvtColor(face_bgr, cv2.COLOR_BGR2RGB)
-                    interpolation = cv2.INTER_AREA
 
-                face = cv2.resize(face, (model_width, model_height), interpolation=interpolation)
+                face = cv2.resize(
+                    face, (model_width, model_height), interpolation=cv2.INTER_AREA
+                )
                 if channels == 1:
                     face = np.expand_dims(face, axis=-1)
 
@@ -158,11 +187,10 @@ def main():
                 confidence = float(scores[class_index]) * 100.0
 
                 cv2.rectangle(frame, (x0, y0), (x1, y1), (255, 0, 0), 2)
-                text_y = max(y0 - 10, 25)
                 cv2.putText(
                     frame,
                     f"{label} ({confidence:.1f}%)",
-                    (x0, text_y),
+                    (x0, max(y0 - 10, 25)),
                     cv2.FONT_HERSHEY_SIMPLEX,
                     0.7,
                     (0, 255, 0),
