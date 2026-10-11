@@ -1,0 +1,10 @@
+# Python environment and cache
+.venv/
+__pycache__/
+*.py[cod]
+
+# Generated training outputs
+best_emotion_model.keras
+confusion_matrix.csv
+evaluation.json
+training_history.csv
