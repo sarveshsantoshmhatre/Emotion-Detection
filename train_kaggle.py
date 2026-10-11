@@ -114,10 +114,13 @@ def count_images(folder):
 
 
 def build_model():
+    # Mild augmentation helps with webcam lighting and pose variation. Keep
+    # transformations conservative because exaggerated faces can change the label.
     augmentation = keras.Sequential(
         [
             layers.RandomFlip("horizontal"),
             layers.RandomRotation(0.04),
+            layers.RandomContrast(0.12),
         ],
         name="training_augmentation",
     )
@@ -210,12 +213,18 @@ def main():
     val_ds = val_ds.prefetch(autotune)
     test_ds = test_ds.prefetch(autotune)
 
-    total = sum(count_images(train_dir / name) for name in CLASS_NAMES)
-    class_weights = {}
-    for index, name in enumerate(CLASS_NAMES):
-        count = count_images(train_dir / name)
-        class_weights[index] = total / (len(CLASS_NAMES) * max(count, 1))
-    print("\nClass weights:", class_weights)
+    # Use a slightly stronger inverse-frequency weighting than the baseline.
+    # The exponent 0.75 avoids extreme weights while emphasizing underrepresented
+    # classes. Compare the new evaluation.json against the previous run.
+    counts = {name: count_images(train_dir / name) for name in CLASS_NAMES}
+    total = sum(counts.values())
+    mean_count = total / len(CLASS_NAMES)
+    class_weights = {
+        index: (mean_count / max(counts[name], 1)) ** 0.75
+        for index, name in enumerate(CLASS_NAMES)
+    }
+    print("\nTraining counts:", counts)
+    print("Class weights:", class_weights)
 
     model = build_model()
     model.summary()
