@@ -3,10 +3,10 @@
 Usage:
     python test.py
     python test.py --camera 1
-    python test.py --model /path/to/model.h5
+    python test.py --model /path/to/model.keras
 
-Legacy HDF5 models saved with Keras 2 may require the optional tf-keras
-compatibility package when running with TensorFlow/Keras 3.
+Native .keras models are preferred. Legacy HDF5 models may require the optional
+ tf-keras compatibility package when running with TensorFlow/Keras 3.
 """
 
 import argparse
@@ -48,8 +48,8 @@ def parse_args():
     parser.add_argument(
         "--model",
         type=Path,
-        default=BASE_DIR / "Emotion_Detection.h5",
-        help="Path to a saved Keras .h5 model",
+        default=BASE_DIR / "Emotion_Detection.keras",
+        help="Path to a saved Keras .keras model (legacy .h5 is also supported)",
     )
     parser.add_argument(
         "--cascade",
