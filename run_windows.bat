@@ -16,9 +16,9 @@ if not exist ".venv\Scripts\python.exe" (
     if errorlevel 1 goto fail
 )
 
-echo Installing or updating required packages...
+echo Installing desktop dependencies...
 ".venv\Scripts\python.exe" -m pip install --upgrade pip
-".venv\Scripts\python.exe" -m pip install -r requirements.txt
+".venv\Scripts\python.exe" -m pip install -r requirements-desktop.txt
 if errorlevel 1 goto fail
 
 echo Starting EmotionLens desktop app...
