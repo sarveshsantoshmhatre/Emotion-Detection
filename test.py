@@ -10,6 +10,7 @@ Native .keras models are preferred. Legacy HDF5 models may require the optional
 """
 
 import argparse
+import json
 from pathlib import Path
 import sys
 
@@ -35,6 +36,24 @@ except ImportError:
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_LABELS = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
+
+
+def load_emotion_labels(labels_path):
+    """Load the output-index mapping written by train_kaggle.py."""
+    if not labels_path.is_file():
+        raise SystemExit(f"Emotion label mapping not found: {labels_path}")
+    try:
+        mapping = json.loads(labels_path.read_text(encoding="utf-8"))
+        if not isinstance(mapping, dict) or not mapping:
+            raise ValueError("expected a non-empty JSON object")
+        indices = list(mapping.values())
+        if not all(isinstance(index, int) for index in indices):
+            raise ValueError("all label indices must be integers")
+        if sorted(indices) != list(range(len(mapping))):
+            raise ValueError("label indices must be unique and contiguous from zero")
+        return [name.title() for name, _ in sorted(mapping.items(), key=lambda item: item[1])]
+    except (OSError, json.JSONDecodeError, ValueError) as exc:
+        raise SystemExit(f"Invalid emotion label mapping in {labels_path}: {exc}") from exc
 
 
 def parse_args():
@@ -102,6 +121,7 @@ def main():
     if face_detector.empty():
         raise SystemExit(f"Could not load face-detection cascade: {args.cascade}")
 
+    labels = load_emotion_labels(BASE_DIR / "emotion_labels.json")
     model = load_emotion_model(args.model)
 
     # Use the model's declared input dimensions rather than assuming 48x48 grayscale.
@@ -134,10 +154,10 @@ def main():
         print("Input normalization: in webcam script")
 
     class_count = int(output_shape[-1])
-    if class_count != len(DEFAULT_LABELS):
+    if class_count != len(labels):
         raise SystemExit(
             f"The model outputs {class_count} classes, but test.py defines "
-            f"{len(DEFAULT_LABELS)} labels. Update DEFAULT_LABELS to match the training "
+            f"{len(labels)} labels. Check emotion_labels.json against the training "
             "dataset's class_indices order before running predictions."
         )
 
@@ -194,22 +214,22 @@ def main():
                     if args.debug_probabilities and frame_index % 15 == 0:
                         score_text = ", ".join(
                             f"{name}={float(score):.3f}"
-                            for name, score in zip(DEFAULT_LABELS, scores)
+                            for name, score in zip(labels, scores)
                         )
                         print(f"Model outputs (raw): {score_text}")
                 except Exception as exc:
                     print(f"Prediction failed: {exc}", file=sys.stderr)
                     continue
 
-                if scores.size != len(DEFAULT_LABELS):
+                if scores.size != len(labels):
                     print(
-                        f"Unexpected prediction size {scores.size}; expected {len(DEFAULT_LABELS)}.",
+                        f"Unexpected prediction size {scores.size}; expected {len(labels)}.",
                         file=sys.stderr,
                     )
                     continue
 
                 class_index = int(np.argmax(scores))
-                label = DEFAULT_LABELS[class_index]
+                label = labels[class_index]
                 confidence = float(scores[class_index]) * 100.0
 
                 cv2.rectangle(frame, (x0, y0), (x1, y1), (255, 0, 0), 2)
