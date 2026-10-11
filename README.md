@@ -59,7 +59,7 @@ Keep these files together in the project folder:
 - `Emotion_Detection.keras` — trained model.
 - `emotion_labels.json` — model output-index mapping.
 - `haarcascade_frontalface_default.xml` — face detector.
-- `requirements.txt` — Python packages.
+- `requirements-desktop.txt` — dependencies for the native app (GUI-enabled OpenCV).\n- `requirements.txt` — dependencies for the hosted Streamlit app (headless OpenCV).
 - `run_windows.bat` / `run_ubuntu.sh` — setup and launcher scripts.
 
 ### Troubleshooting
