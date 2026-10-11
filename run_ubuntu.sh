@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 
 if ! command -v python3.11 >/dev/null 2>&1; then
   echo "Python 3.11 is required. Install it with your distribution's package manager."
-  echo "On Ubuntu, also install: sudo apt install python3.11-venv python3-tk"
+  echo "On Ubuntu, install: sudo apt install python3.11-venv python3-tk"
   exit 1
 fi
 
@@ -14,5 +14,5 @@ fi
 
 source .venv/bin/activate
 python -m pip install --upgrade pip
-python -m pip install -r requirements.txt
+python -m pip install -r requirements-desktop.txt
 exec python desktop_app.py
