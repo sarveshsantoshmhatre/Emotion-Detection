@@ -154,6 +154,24 @@ def process_video_frame(frame):
     return av.VideoFrame.from_ndarray(annotated, format="bgr24")
 
 
+def get_rtc_configuration():
+    """Use optional TURN credentials from Streamlit secrets; STUN alone may fail behind restrictive NATs."""
+    default_servers = [
+        {"urls": ["stun:stun.l.google.com:19302"]},
+        {"urls": ["stun:stun1.l.google.com:19302"]},
+    ]
+    try:
+        rtc_secrets = st.secrets.get("webrtc", {})
+        configured_servers = rtc_secrets.get("ice_servers", [])
+        if configured_servers:
+            return {"iceServers": list(configured_servers)}, True
+    except Exception:
+        pass
+    return {"iceServers": default_servers}, False
+
+
+RTC_CONFIGURATION, HAS_TURN_CONFIGURATION = get_rtc_configuration()
+
 st.markdown("### Choose your experience")
 mode = st.radio(
     "Input mode",
@@ -173,9 +191,16 @@ if mode == "Live webcam":
         mode=WebRtcMode.SENDRECV,
         video_frame_callback=process_video_frame,
         media_stream_constraints={"video": True, "audio": False},
+        rtc_configuration=RTC_CONFIGURATION,
         async_processing=True,
     )
-    st.caption("If video does not connect, check browser camera permission and network restrictions.")
+    if not HAS_TURN_CONFIGURATION:
+        st.info(
+            "If the webcam stays on “Connecting”, this hosting/network combination may require a TURN relay. "
+            "Add TURN server details in Streamlit app settings → Secrets under [webrtc] ice_servers. "
+            "STUN-only connections do not work on every network."
+        )
+    st.caption("Allow camera access. If it still cannot connect, try a different network or configure TURN in app Secrets.")
 else:
     uploaded = st.file_uploader(
         "Choose a face photo", type=["jpg", "jpeg", "png"],
