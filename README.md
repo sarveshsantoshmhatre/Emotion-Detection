@@ -1,26 +1,39 @@
 # Emotion Detection
 
-Real-time facial emotion detection using a webcam and a Keras model.
+Real-time facial-expression classification using a webcam and a Keras model.
 
 ## Run the webcam demo
 
-1. Install Python dependencies in your virtual environment (including OpenCV, TensorFlow/Keras, and NumPy).
-2. Ensure `Emotion_Detection.keras`, `emotion_labels.json`, and `haarcascade_frontalface_default.xml` are in the project directory.
-3. Run:
+Use Python 3.10 or newer in a virtual environment.
 
 ```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 python test.py
 ```
 
+Ensure these files are in the project directory:
+
+- `Emotion_Detection.keras` — trained model.
+- `emotion_labels.json` — maps model output indices to emotion names.
+- `haarcascade_frontalface_default.xml` — face detector.
+
+Press `q` or Esc in the webcam window to exit. If the default camera cannot be opened, try `python test.py --camera 1`.
+
 ## Training
 
-`train_kaggle.py` contains the training pipeline for the FER-2013 dataset. Run it in an environment where the dataset is available and configured.
+`train_kaggle.py` trains a five-class model on a FER-2013-style directory with `train/` and `test/` folders. The supported classes are `angry`, `happy`, `neutral`, `sad`, and `surprise`; fear and disgust are intentionally excluded.
 
-## Files
+Example:
 
-- `test.py` — webcam inference.
-- `Emotion_Detection.keras` — trained model used by the demo.
-- `emotion_labels.json` — model output label mapping.
-- `haarcascade_frontalface_default.xml` — face detector cascade.
-- `train_kaggle.py` — training and evaluation pipeline.
-- `inspect_model.py` — optional model inspection/debugging utility.
+```bash
+python train_kaggle.py --data-dir /path/to/fer2013 --output-dir ./emotion-output
+```
+
+Training can be resource-intensive; a hosted notebook with a GPU is recommended. Review `evaluation.json` before replacing the model used by the webcam app. Copy both `Emotion_Detection.keras` and `emotion_labels.json` from the training output together.
+
+## Limitations
+
+Predictions depend on lighting, face angle, camera quality, and the training data. The displayed softmax score is not a calibrated probability, and facial-expression classification cannot reliably determine a person's actual emotional state.
