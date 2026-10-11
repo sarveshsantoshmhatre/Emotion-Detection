@@ -1,7 +1,7 @@
 tensorflow==2.18.1
-opencv-python-headless==4.10.0.84
+opencv-python==4.10.0.84
 numpy>=1.26,<2.1
+Pillow>=10.0
 streamlit>=1.40
 streamlit-webrtc>=0.63.3
 av>=12.0
-Pillow>=10.0
