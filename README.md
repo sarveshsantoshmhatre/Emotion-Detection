@@ -1,19 +1,26 @@
-# PyPower Project - Emotion Detection using AI
+# Emotion Detection
 
-## Emotion Detection
+Real-time facial emotion detection using a webcam and a Keras model.
 
-- Kaggle Dataset :- https://www.kaggle.com/c/challenges-in-representation-learning-facial-expression-recognition-challenge/data.
+## Run the webcam demo
 
-- Use train.py file to train the model.
+1. Install Python dependencies in your virtual environment (including OpenCV, TensorFlow/Keras, and NumPy).
+2. Ensure `Emotion_Detection.keras`, `emotion_labels.json`, and `haarcascade_frontalface_default.xml` are in the project directory.
+3. Run:
 
-- Change the number of classes according to you.
+```bash
+python test.py
+```
 
-- Do Experiment with different pre-trained models.
+## Training
 
-- Execute the test.py file to run the Emotion Detection.
+`train_kaggle.py` contains the training pipeline for the FER-2013 dataset. Run it in an environment where the dataset is available and configured.
 
-- Enjoy Deep Learning.
+## Files
 
-## The detailed tutorial is available in this video. Please do refer for better understanding.
-
-- https://youtu.be/PulKlAZRoAY
+- `test.py` — webcam inference.
+- `Emotion_Detection.keras` — trained model used by the demo.
+- `emotion_labels.json` — model output label mapping.
+- `haarcascade_frontalface_default.xml` — face detector cascade.
+- `train_kaggle.py` — training and evaluation pipeline.
+- `inspect_model.py` — optional model inspection/debugging utility.
