@@ -123,6 +123,16 @@ def main():
     output_shape = model.output_shape
     if isinstance(output_shape, list) or len(output_shape) < 2 or output_shape[-1] is None:
         raise SystemExit(f"Could not determine model output classes from shape {output_shape}.")
+    # The new training script embeds Rescaling(1/255) in the model; the legacy model does not.
+    # Avoid dividing twice, which would make the new model receive near-zero pixel values.
+    has_internal_rescaling = any(
+        layer.__class__.__name__ == "Rescaling" for layer in model.layers
+    )
+    if has_internal_rescaling:
+        print("Input normalization: inside model")
+    else:
+        print("Input normalization: in webcam script")
+
     class_count = int(output_shape[-1])
     if class_count != len(DEFAULT_LABELS):
         raise SystemExit(
@@ -175,7 +185,10 @@ def main():
                 if channels == 1:
                     face = np.expand_dims(face, axis=-1)
 
-                batch = np.expand_dims(face.astype(np.float32) / 255.0, axis=0)
+                face_array = face.astype(np.float32)
+                if not has_internal_rescaling:
+                    face_array /= 255.0
+                batch = np.expand_dims(face_array, axis=0)
                 try:
                     scores = np.asarray(model.predict(batch, verbose=0))[0]
                     if args.debug_probabilities and frame_index % 15 == 0:
