@@ -41,6 +41,11 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Webcam facial-expression detector")
     parser.add_argument("--camera", type=int, default=0, help="OpenCV camera index (default: 0)")
     parser.add_argument(
+        "--debug-probabilities",
+        action="store_true",
+        help="Print raw model outputs for each emotion every 15 frames",
+    )
+    parser.add_argument(
         "--model",
         type=Path,
         default=BASE_DIR / "Emotion_Detection.h5",
@@ -138,8 +143,10 @@ def main():
     print(f"Model input: {model_height}x{model_width}x{channels}")
     print("Press 'q' or Esc to quit.")
 
+    frame_index = 0
     try:
         while True:
+            frame_index += 1
             ok, frame = camera.read()
             if not ok or frame is None:
                 print("Warning: could not read a frame from the camera.", file=sys.stderr)
@@ -171,6 +178,12 @@ def main():
                 batch = np.expand_dims(face.astype(np.float32) / 255.0, axis=0)
                 try:
                     scores = np.asarray(model.predict(batch, verbose=0))[0]
+                    if args.debug_probabilities and frame_index % 15 == 0:
+                        score_text = ", ".join(
+                            f"{name}={float(score):.3f}"
+                            for name, score in zip(DEFAULT_LABELS, scores)
+                        )
+                        print(f"Model outputs (raw): {score_text}")
                 except Exception as exc:
                     print(f"Prediction failed: {exc}", file=sys.stderr)
                     continue
