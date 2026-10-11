@@ -35,7 +35,11 @@ except ImportError:
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_LABELS = ["Angry", "Happy", "Neutral", "Sad", "Surprise"]
+def contains_rescaling(layer):
+    """Find a Rescaling layer, including inside nested Keras models."""
+    if layer.__class__.__name__ == "Rescaling":
+        return True
+    return any(contains_rescaling(child) for child in getattr(layer, "layers", []))
 
 
 def load_emotion_labels(labels_path):
@@ -145,9 +149,7 @@ def main():
         raise SystemExit(f"Could not determine model output classes from shape {output_shape}.")
     # The new training script embeds Rescaling(1/255) in the model; the legacy model does not.
     # Avoid dividing twice, which would make the new model receive near-zero pixel values.
-    has_internal_rescaling = any(
-        layer.__class__.__name__ == "Rescaling" for layer in model.layers
-    )
+    has_internal_rescaling = contains_rescaling(model)
     if has_internal_rescaling:
         print("Input normalization: inside model")
     else:
@@ -156,7 +158,7 @@ def main():
     class_count = int(output_shape[-1])
     if class_count != len(labels):
         raise SystemExit(
-            f"The model outputs {class_count} classes, but test.py defines "
+            f"The model outputs {class_count} classes, but emotion_labels.json defines "
             f"{len(labels)} labels. Check emotion_labels.json against the training "
             "dataset's class_indices order before running predictions."
         )
@@ -221,11 +223,14 @@ def main():
                     print(f"Prediction failed: {exc}", file=sys.stderr)
                     continue
 
-                if scores.size != len(labels):
+                if scores.ndim != 1 or scores.size != len(labels):
                     print(
-                        f"Unexpected prediction size {scores.size}; expected {len(labels)}.",
+                        f"Unexpected prediction shape {scores.shape}; expected ({len(labels)},).",
                         file=sys.stderr,
                     )
+                    continue
+                if not np.all(np.isfinite(scores)):
+                    print("Prediction returned non-finite scores; skipping this frame.", file=sys.stderr)
                     continue
 
                 class_index = int(np.argmax(scores))
