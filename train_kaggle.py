@@ -305,10 +305,9 @@ def main():
         for name, row in zip(CLASS_NAMES, confusion):
             writer.writerow([name, *row.tolist()])
 
-    # Keras .keras is the modern format. The .h5 export supports the current
-    # webcam script's default model filename and is saved with the same five-label order.
+    # Save in the native Keras format. Legacy HDF5 serialization can fail
+    # with Keras 3 when models include preprocessing/augmentation layers.
     model.save(output_dir / "Emotion_Detection.keras")
-    model.save(output_dir / "Emotion_Detection.h5")
 
     print("\nEvaluation results:")
     print(json.dumps(metrics, indent=2))
@@ -316,7 +315,7 @@ def main():
     for path in sorted(output_dir.iterdir()):
         print(f"  {path} ({path.stat().st_size:,} bytes)")
     print(
-        "\nDownload Emotion_Detection.h5 and replace the local model only after "
+        "\nDownload Emotion_Detection.keras and replace the local model only after "
         "reviewing evaluation.json. Keep a backup of the current model."
     )
 
