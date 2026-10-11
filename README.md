@@ -4,14 +4,14 @@ Facial-expression classification using a Keras model, with a desktop webcam demo
 
 ## Deploy the Streamlit web app
 
-The hosted app accepts an uploaded photo or a still image captured through the browser camera.
+The hosted app supports continuous webcam video through WebRTC and photo upload. Live webcam mode requires browser camera permission and a network that permits WebRTC connections.
 
 1. Confirm these files are committed to the repository root: `app.py`, `Emotion_Detection.keras`, `emotion_labels.json`, `haarcascade_frontalface_default.xml`, and `requirements.txt`.
 2. Open [Streamlit Community Cloud](https://share.streamlit.io/) and sign in with GitHub.
 3. Choose **Create app**, select this repository and the `main` branch, and set **Main file path** to `app.py`.
 4. Select **Deploy** and review the app logs if the build fails.
 
-Streamlit installs the dependencies in `requirements.txt`. The model runs on the hosting instance, typically on CPU. The browser camera control captures a still image; it is not continuous video streaming.
+Streamlit installs the dependencies in `requirements.txt`. The model runs on the hosting instance, typically on CPU. Live webcam mode uses `streamlit-webrtc`; if the video fails to connect, check browser camera permission and network/firewall restrictions. Photo upload remains available as a fallback.
 
 ## Run the Streamlit app locally
 
